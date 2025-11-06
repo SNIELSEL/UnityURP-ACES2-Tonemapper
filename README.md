@@ -97,9 +97,9 @@ you can bake a LUT using the `ociobakelut` tool:
 
 ```powershell
 & "C:\Tools\OpenColorIO\bin\ociobakelut.exe" `
-  --iconfig "C:\Users\offic\Downloads\zanderlabs\Unity\Ocio\aces2.ocio" `
+  --iconfig "[Path to .ocio]" `
   --inputspace "ACEScg" `
   --displayview "sRGB - Display" "ACES 2.0 - SDR 100 nits (Rec.709)" `
   --format iridas_cube --cubesize 33 `
-  "C:\Users\offic\Downloads\zanderlabs\Unity\Ocio\aces2_sdr709_33.cube"
+  "YourOutputPath\aces2_sdr709_33.cube"
 
