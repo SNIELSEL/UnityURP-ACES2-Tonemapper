@@ -71,9 +71,7 @@ It should look like this:
 If you imported the package samples via  
 **Package Manager → Samples → Import**,  
 you’ll get:
-- A ready-made **Renderer Asset** setup with both features
-- Example **Volume Profile**
-- Example **Tonemapper Material**
+- Example **Scene**
 
 Perfect for quick testing or reference!
 

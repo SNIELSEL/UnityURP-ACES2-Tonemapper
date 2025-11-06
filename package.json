@@ -13,14 +13,14 @@
     "email": "info@nielshaverkotte.nl",
     "url": "https://nielshaverkotte.nl"
   },
-  "documentationUrl": "https://github.com/<your-org-or-user>/<your-repo>/#readme",
-  "changelogUrl": "https://github.com/<your-org-or-user>/<your-repo>/releases",
+  "documentationUrl": "https://github.com/SNIELSEL/UnityURP-ACES2-Tonemapper/blob/main/README.md",
+  "changelogUrl": "https://github.com/SNIELSEL/UnityURP-ACES2-Tonemapper/releases",
   "repository": {
     "type": "git",
-    "url": "https://github.com/<your-org-or-user>/<your-repo>.git"
+    "url": "https://github.com/SNIELSEL/UnityURP-ACES2-Tonemapper.git"
   },
   "bugs": {
-    "url": "https://github.com/<your-org-or-user>/<your-repo>/issues",
+    "url": "https://github.com/SNIELSEL/UnityURP-ACES2-Tonemapper/issues",
     "email": "info@nielshaverkotte.nl"
   },
   "keywords": [
@@ -35,7 +35,7 @@
     {
       "displayName": "ACES2 Example",
       "description": "A minimal scene and settings showing the ACES2 tonemapper wired in URP 17.2+.",
-      "path": "Samples~/Example"
+      "path": "Samples~/DemoScene"
     }
   ]
 }
