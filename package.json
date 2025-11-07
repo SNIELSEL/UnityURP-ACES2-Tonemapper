@@ -4,7 +4,7 @@
   "displayName": "ACES 2 Tonemapper (URP)",
   "description": "A full-screen ACES 2.0 tonemapper for URP. Adds a Volume-driven tonemapper and a RenderGraph-friendly renderer feature.",
   "license": "MIT",
-  "unity": "6000",
+  "unity": "6000.0",
   "dependencies": {
     "com.unity.render-pipelines.universal": "17"
   },
@@ -13,7 +13,7 @@
     "email": "info@nielshaverkotte.nl",
     "url": "https://nielshaverkotte.nl"
   },
-  "documentationUrl": "https://github.com/SNIELSEL/UnityURP-ACES2-Tonemapper/blob/main/README.md",
+  "documentationUrl": "https://github.com/SNIELSEL/UnityURP-ACES2-Tonemapper#readme",
   "changelogUrl": "https://github.com/SNIELSEL/UnityURP-ACES2-Tonemapper/blob/main/CHANGELOG.md",
   "repository": {
     "type": "git",
@@ -33,9 +33,14 @@
   ],
   "samples": [
     {
-      "displayName": "ACES2 Example",
-      "description": "A minimal scene and settings showing the ACES2 tonemapper wired in URP 17.2+.",
+      "displayName": "ACES2",
+      "description": "A scene and settings showing the ACES2 tonemapper wired in URP 17+.",
       "path": "Samples~/ACES2"
+    },
+    {
+      "displayName": "ACES2 Minimal",
+      "description": "A minimal sample only containing the tonemap texture and texture3D.",
+      "path": "Samples~/ACES2_Minimal"
     }
   ]
 }
