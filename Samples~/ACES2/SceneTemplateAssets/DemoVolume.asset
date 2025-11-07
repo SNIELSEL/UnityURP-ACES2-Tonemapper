@@ -138,7 +138,7 @@ MonoBehaviour:
     m_OverrideState: 1
     m_Value: 1
   materialOverride:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {fileID: 2100000, guid: 0f4396371b229b241964f774faf96874, type: 2}
 --- !u!114 &-1896066644172177379
 MonoBehaviour:
@@ -178,7 +178,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d7fd9488000d3734a9e00ee676215985, type: 3}
-  m_Name: MainScene
+  m_Name: DemoVolume
   m_EditorClassIdentifier: 
   components:
   - {fileID: -7716111000241375648}

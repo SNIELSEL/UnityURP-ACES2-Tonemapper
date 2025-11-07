@@ -72,6 +72,12 @@ Shader "Custom/TonemapperACES2"
                 // Source color from fullscreen blit
                 float4 src = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, i.uv);
 
+                // No-op if disabled or no valid LUT
+                if (_Contribution <= 1e-5 || _Aces2LutSize < 2)
+                    return src;
+
+
+
             #ifdef TEST_PASSTHROUGH
                 // Debug: shows the input unmodified
                 return src;

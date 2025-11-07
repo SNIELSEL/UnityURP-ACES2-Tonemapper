@@ -51,45 +51,40 @@ namespace Custom.ACES2
 
             public override void RecordRenderGraph(RenderGraph rg, ContextContainer frameData)
             {
-                // Get Volume
                 var stack = VolumeManager.instance.stack;
                 var vol = stack.GetComponent<CustomTonemapper>();
 
-                // Choose material (Volume override wins)
                 var mat = (vol != null && vol.materialOverride.value != null)
                     ? vol.materialOverride.value
-                    : _defaultMat;
+                    : _defaultMat; // <- use this, not settings.tonemapperMaterial
 
-                if (mat == null)
-                    return; // nothing to do
+                if (mat == null) return;
 
-                // If component inactive or not ACES2, set contribution 0 and bail
-                if (vol == null || !vol.active || vol.mode.value != CustomTonemapperMode.ACES2)
+                bool inactive = vol == null || !vol.active
+                             || vol.mode.value != CustomTonemapperMode.ACES2
+                             || vol.aces2LUT.value == null;
+
+                if (inactive)
                 {
                     mat.SetFloat("_Contribution", 0f);
-                    return;
+                    mat.SetFloat("_Aces2LutSize", 0f);
+                    return; // skip scheduling passes when off
                 }
 
-                // Push Volume → Material
                 mat.SetTexture("_Aces2Lut", vol.aces2LUT.value);
                 mat.SetFloat("_Aces2LutSize", Mathf.Max(2, vol.lutSize.value));
                 mat.SetFloat("_Contribution", Mathf.Clamp01(vol.contribution.value));
                 mat.SetFloat("_LutIsSRGB", vol.lutOutputIsSRGB.value ? 1f : 0f);
 
-                // Fetch camera color from URP RG resources
                 var urp = frameData.Get<UniversalResourceData>();
                 var cameraColor = urp.activeColorTexture;
 
-                // Temp texture to avoid read/write hazards
                 var tmpDesc = rg.GetTextureDesc(cameraColor);
                 tmpDesc.name = "CustomTonemapper_TempColor";
                 var tempColor = rg.CreateTexture(in tmpDesc);
 
-                // -------- Pass A: cameraColor -> tempColor (apply tonemap) --------
                 using (var builder = rg.AddRasterRenderPass<PassData>(
-                    "ACES2 Tonemap (Apply)",
-                    out var dataA,
-                    new ProfilingSampler("ACES2.Tonemap.Apply")))
+                    "ACES2 Tonemap (Apply)", out var dataA, new ProfilingSampler("ACES2.Tonemap.Apply")))
                 {
                     dataA.mat = mat;
                     dataA.matPass = _matPass;
@@ -98,33 +93,25 @@ namespace Custom.ACES2
 
                     builder.UseTexture(dataA.src, AccessFlags.Read);
                     builder.SetRenderAttachment(dataA.dst, 0);
-                    // builder.AllowPassCulling(false); // optional
-
                     builder.SetRenderFunc((PassData d, RasterGraphContext ctx) =>
                     {
-                        // Fullscreen blit with material
                         Blitter.BlitTexture(ctx.cmd, d.src, new Vector4(1, 1, 0, 0), d.mat, d.matPass);
                     });
-                } // <- builder disposed here
+                }
 
-                // -------- Pass B: tempColor -> cameraColor (copy back) --------
                 using (var builder = rg.AddRasterRenderPass<PassData>(
-                    "ACES2 Tonemap (CopyBack)",
-                    out var dataB,
-                    new ProfilingSampler("ACES2.Tonemap.CopyBack")))
+                    "ACES2 Tonemap (CopyBack)", out var dataB, new ProfilingSampler("ACES2.Tonemap.CopyBack")))
                 {
                     dataB.src = tempColor;
                     dataB.dst = cameraColor;
 
                     builder.UseTexture(dataB.src, AccessFlags.Read);
                     builder.SetRenderAttachment(dataB.dst, 0);
-
                     builder.SetRenderFunc((PassData d, RasterGraphContext ctx) =>
                     {
-                        // Raw copy, no material
                         Blitter.BlitTexture(ctx.cmd, d.src, Vector4.one, 0, false);
                     });
-                } // <- builder disposed here BEFORE adding anything else
+                }
             }
         }
 

@@ -1,0 +1,18 @@
+{
+  "name": "com.nielshaverkotte.aces2.editor",
+  "references": [
+    "Unity.RenderPipelines.Universal.Runtime",
+    "Unity.RenderPipelines.Universal.Editor",
+    "Unity.RenderPipelines.Core.Runtime",
+    "Unity.RenderPipelines.Core.Editor"
+  ],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true,
+  "versionDefines": [
+    {
+      "name": "com.unity.render-pipelines.universal",
+      "expression": "17.0.0",
+      "define": "HAS_URP"
+    }
+  ]
+}

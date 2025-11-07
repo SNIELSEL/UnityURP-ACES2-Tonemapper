@@ -1,178 +1,218 @@
+﻿#if HAS_URP
+using UnityEngine.Rendering.Universal;
+#endif
 using System;
-using System.IO;
 using System.Linq;
 using UnityEditor;
-using UnityEditor.Rendering;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 
 namespace ACES2.EditorTools
 {
     public static class ACES2Installer
     {
-        public const string TargetMatAssetName = "MAT_ACES2_Fullscreen.mat";
-        public const string TargetLutAssetName = "ACES2_33.asset";
-
-        static readonly string[] CandidateRoots =
+        public static bool TryFindSampleAssets(out string materialPath, out string lutPath)
         {
-            "Assets/Custom/ACES2/Samples/ACES2/SceneTemplateAssets/ACES2Stuff",
-            "Assets/Samples"
-        };
-
-        public static bool TryFindSampleAssets(out string matPath, out string lutPath)
-        {
-            matPath = null;
+            materialPath = null;
             lutPath = null;
-
-            foreach (var root in CandidateRoots)
+            string[] roots =
+            {
+                "Assets/Custom/ACES2/Samples/ACES2/SceneTemplateAssets/ACES2Stuff",
+                "Assets/Samples/ACES2/SceneTemplateAssets/ACES2Stuff",
+                "Assets"
+            };
+            foreach (var root in roots)
             {
                 if (!AssetDatabase.IsValidFolder(root)) continue;
-
-                if (root.EndsWith("/Samples"))
-                {
-                    var matches = AssetDatabase.FindAssets("t:Material MAT_ACES2_Fullscreen", new[] { root });
-                    if (matches != null && matches.Length > 0)
-                    {
-                        var p = AssetDatabase.GUIDToAssetPath(matches[0]);
-                        var folder = Path.GetDirectoryName(p).Replace("\\", "/");
-                        var lp = Path.Combine(folder, TargetLutAssetName).Replace("\\", "/");
-                        if (File.Exists(lp))
-                        {
-                            matPath = p;
-                            lutPath = lp;
-                            return true;
-                        }
-                    }
-                }
-                else
-                {
-                    var mp = Path.Combine(root, TargetMatAssetName).Replace("\\", "/");
-                    var lp = Path.Combine(root, TargetLutAssetName).Replace("\\", "/");
-                    if (File.Exists(mp) && File.Exists(lp))
-                    {
-                        matPath = mp;
-                        lutPath = lp;
-                        return true;
-                    }
-                }
+                var matGuids = AssetDatabase.FindAssets("t:Material MAT_ACES2_Fullscreen", new[] { root });
+                if (matGuids.Length == 0) matGuids = AssetDatabase.FindAssets("t:Material ACES2", new[] { root });
+                var lutGuids = AssetDatabase.FindAssets("t:Texture3D ACES2_33", new[] { root });
+                if (matGuids.Length > 0) materialPath = AssetDatabase.GUIDToAssetPath(matGuids[0]);
+                if (lutGuids.Length > 0) lutPath = AssetDatabase.GUIDToAssetPath(lutGuids[0]);
+                if (materialPath != null && lutPath != null) return true;
             }
             return false;
         }
 
-        public static bool EnsureLutLinkedOnMaterial(string matPath, string lutPath)
+        public static void EnsureLutLinkedOnMaterial(string materialPath, string lutPath)
         {
-            var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
             var lut = AssetDatabase.LoadAssetAtPath<Texture3D>(lutPath);
-            if (mat == null || lut == null) return false;
-            mat.SetTexture("_Aces2Lut", lut);
-            EditorUtility.SetDirty(mat);
-            AssetDatabase.SaveAssets();
-            return true;
-        }
-
-        public static void OpenPackageManagerToPackage(string packageNameOrDisplayName)
-        {
-            var t = Type.GetType("UnityEditor.PackageManager.UI.Window, UnityEditor.PackageManagerUIModule");
-            if (t != null)
+            if (!mat || !lut) return;
+            if (!mat.GetTexture("_Aces2Lut"))
             {
-                var mOpen = t.GetMethod("Open", new[] { typeof(string) });
-                if (mOpen != null)
-                {
-                    mOpen.Invoke(null, new object[] { packageNameOrDisplayName });
-                    return;
-                }
+                mat.SetTexture("_Aces2Lut", lut);
+                EditorUtility.SetDirty(mat);
+                AssetDatabase.SaveAssets();
             }
-            EditorApplication.ExecuteMenuItem("Window/Package Manager");
         }
 
-        public static void AddUrpRenderFeaturesFromMaterial(string projectMaterialPath)
+        public static void OpenPackageManagerToPackage(string packageName)
         {
-            var urp = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
-            if (urp == null) { EditorUtility.DisplayDialog("ACES2", "No Universal Render Pipeline asset is active.", "OK"); return; }
+            EditorApplication.ExecuteMenuItem("Window/Package Manager");
+            var t = typeof(EditorApplication).Assembly.GetType("UnityEditor.PackageManager.UI.PackageManagerWindow");
+            if (t == null) return;
+            var win = EditorWindow.GetWindow(t, true, "Package Manager");
+            t.GetMethod("SelectPackageAndFilter",
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic)
+             ?.Invoke(win, new object[] { packageName, "InProject" });
+        }
 
-            var rd = GetDefaultRendererData(urp);
-            if (rd == null) { EditorUtility.DisplayDialog("ACES2", "Could not access the default URP Renderer Data.", "OK"); return; }
+        public static void AddUrpRenderFeaturesFromMaterial(string materialPath)
+        {
+#if HAS_URP
+            AddUrpRenderFeaturesFromMaterial_Internal_URP(materialPath);
+#else
+            EditorUtility.DisplayDialog("ACES2 Setup",
+                "Universal Render Pipeline (URP) is not installed or the URP define is missing.\n\nInstall URP 17+ via Package Manager, then try again.",
+                "OK");
+#endif
+        }
 
-            var mat = AssetDatabase.LoadAssetAtPath<Material>(projectMaterialPath);
-            if (mat == null) { EditorUtility.DisplayDialog("ACES2", $"Material not found:\n{projectMaterialPath}", "OK"); return; }
+#if HAS_URP
+        private static ScriptableRendererFeature FindFeature(SerializedProperty featuresProp, string fullTypeName)
+        {
+            for (int i = 0; i < featuresProp.arraySize; i++)
+            {
+                var f = featuresProp.GetArrayElementAtIndex(i).objectReferenceValue as ScriptableRendererFeature;
+                if (f && f.GetType().FullName == fullTypeName) return f;
+            }
+            return null;
+        }
 
-            var custom = EnsureFeature<Custom.ACES2.CustomTonemapperRendererFeature>(rd, "Custom Tonemapper Renderer Feature");
-            if (custom != null)
+        private static ScriptableRendererFeature AddFeature(SerializedProperty featuresProp, ScriptableRendererData owner, string fullTypeName)
+        {
+            var type = Type.GetType(fullTypeName) ??
+                       AppDomain.CurrentDomain.GetAssemblies()
+                           .Select(a => a.GetType(fullTypeName, false))
+                           .FirstOrDefault(x => x != null);
+            if (type == null) return null;
+            var feature = ScriptableObject.CreateInstance(type) as ScriptableRendererFeature;
+            if (!feature) return null;
+            AssetDatabase.AddObjectToAsset(feature, owner);
+            featuresProp.InsertArrayElementAtIndex(featuresProp.arraySize);
+            featuresProp.GetArrayElementAtIndex(featuresProp.arraySize - 1).objectReferenceValue = feature;
+            return feature;
+        }
+
+        private static void AddUrpRenderFeaturesFromMaterial_Internal_URP(string materialPath)
+        {
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+            if (!mat)
+            {
+                EditorUtility.DisplayDialog("ACES2 Setup", $"Material not found:\n{materialPath}", "OK");
+                return;
+            }
+
+            var urpAsset = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+            if (!urpAsset)
+            {
+                EditorUtility.DisplayDialog("ACES2 Setup", "No active URP Asset set in Project Settings → Graphics.", "OK");
+                return;
+            }
+
+            var urpSO = new SerializedObject(urpAsset);
+            var rendererListProp = urpSO.FindProperty("m_RendererDataList");
+            if (rendererListProp == null || rendererListProp.arraySize == 0)
+            {
+                EditorUtility.DisplayDialog("ACES2 Setup", "URP Asset has no Renderer Data.", "OK");
+                return;
+            }
+
+            var defIdxProp = urpSO.FindProperty("m_DefaultRendererIndex");
+            int defaultIndex = defIdxProp != null ? Mathf.Clamp(defIdxProp.intValue, 0, rendererListProp.arraySize - 1) : 0;
+
+            var rendererData = rendererListProp.GetArrayElementAtIndex(defaultIndex).objectReferenceValue as ScriptableRendererData;
+            if (!rendererData)
+            {
+                EditorUtility.DisplayDialog("ACES2 Setup", "Could not access ScriptableRendererData.", "OK");
+                return;
+            }
+
+            var rdSO = new SerializedObject(rendererData);
+            var featuresProp = rdSO.FindProperty("m_RendererFeatures");
+
+            const string FullscreenType = "UnityEngine.Rendering.Universal.FullScreenPassRendererFeature";
+            const string TonemapperType = "Custom.ACES2.CustomTonemapperRendererFeature";
+
+            var fullscreen = FindFeature(featuresProp, FullscreenType) ?? AddFeature(featuresProp, rendererData, FullscreenType);
+            var custom = FindFeature(featuresProp, TonemapperType) ?? AddFeature(featuresProp, rendererData, TonemapperType);
+
+            rdSO.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(rendererData);
+            AssetDatabase.SaveAssets();
+
+            if (fullscreen)
+            {
+                var so = new SerializedObject(fullscreen);
+                SerializedProperty FindPassMatProp(SerializedObject s)
+                {
+                    // common current name
+                    var p = s.FindProperty("m_PassMaterial");
+                    if (p != null) return p;
+
+                    // older/alt backing names seen in some 17.x drops
+                    p = s.FindProperty("m_Material");
+                    if (p != null) return p;
+
+                    // nested settings container (some variants serialize this way)
+                    var settings = s.FindProperty("m_Settings");
+                    if (settings != null)
+                    {
+                        var inner = settings.FindPropertyRelative("passMaterial");
+                        if (inner != null) return inner;
+                    }
+
+                    // very old fallback (just in case)
+                    return s.FindProperty("passMaterial");
+                }
+
+                var nameProp = so.FindProperty("m_Name");
+                var injProp = so.FindProperty("m_InjectionPoint");
+                var fetchProp = so.FindProperty("m_FetchColorBuffer");
+                var passMatProp = FindPassMatProp(so);
+
+                if (nameProp != null) nameProp.stringValue = "ACES2";
+                if (injProp != null) injProp.intValue = (int)RenderPassEvent.AfterRenderingPostProcessing;
+                if (fetchProp != null) fetchProp.boolValue = true;
+                if (passMatProp != null) passMatProp.objectReferenceValue = mat;
+
+                // force write + refresh
+                so.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(fullscreen);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+
+            if (custom)
             {
                 var so = new SerializedObject(custom);
-                so.FindProperty("settings").FindPropertyRelative("tonemapperMaterial").objectReferenceValue = mat;
-                so.FindProperty("settings").FindPropertyRelative("materialPassIndex").intValue = 0;
-                so.FindProperty("settings").FindPropertyRelative("injectionPoint").enumValueIndex = (int)RenderPassEvent.BeforeRendering;
+                var nameProp = so.FindProperty("m_Name");
+                if (nameProp != null) nameProp.stringValue = "Custom Tonemapper Renderer Feature";
+                var settings = so.FindProperty("settings");
+                if (settings != null)
+                {
+                    var matProp = settings.FindPropertyRelative("tonemapperMaterial");
+                    var passProp = settings.FindPropertyRelative("materialPassIndex");
+                    var injProp = settings.FindPropertyRelative("injectionPoint");
+                    if (matProp != null) matProp.objectReferenceValue = mat;
+                    if (passProp != null) passProp.intValue = 0;
+                    if (injProp != null) injProp.intValue = (int)RenderPassEvent.BeforeRendering;
+                }
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
 
-            var fsType = Type.GetType("UnityEngine.Rendering.Universal.FullScreenPassRendererFeature, Unity.RenderPipelines.Universal.Runtime");
-            if (fsType != null)
-            {
-                var fullScreen = EnsureFeature(rd, fsType, "ACES2");
-                if (fullScreen != null)
-                {
-                    var so = new SerializedObject(fullScreen);
-                    SetIfExists(so, "m_Name", "ACES2");
-                    SetIfExists(so, "m_InjectionPoint", (int)RenderPassEvent.AfterRenderingPostProcessing);
-                    SetIfExists(so, "m_FetchColorBuffer", true);
-                    SetIfExists(so, "m_PassMaterial", mat);
-                    so.ApplyModifiedPropertiesWithoutUndo();
-                }
-            }
-
-            EditorUtility.SetDirty(rd);
             AssetDatabase.SaveAssets();
-            EditorUtility.DisplayDialog("ACES2", "URP Renderer Features added/updated.", "OK");
-        }
+            AssetDatabase.Refresh();
 
-        static ScriptableRendererData GetDefaultRendererData(UniversalRenderPipelineAsset urp)
-        {
-            var so = new SerializedObject(urp);
-            var list = so.FindProperty("m_RendererDataList");
-            var indexProp = so.FindProperty("m_DefaultRendererIndex");
-            if (list == null || !list.isArray) return null;
-            var idx = Mathf.Clamp(indexProp.intValue, 0, list.arraySize - 1);
-            return list.GetArrayElementAtIndex(idx).objectReferenceValue as ScriptableRendererData;
+            EditorUtility.DisplayDialog("ACES2 Setup",
+                "Renderer Features configured:\n\n" +
+                "• Full Screen Pass: Name=ACES2, After Rendering Post Processing, FetchColorBuffer=On, PassMaterial=MAT_ACES2_Fullscreen\n" +
+                "• Custom Tonemapper: Name set, Material linked, Before Rendering Post Processing",
+                "OK");
         }
-
-        static T EnsureFeature<T>(ScriptableRendererData rd, string name) where T : ScriptableRendererFeature
-        {
-            var f = rd.rendererFeatures.FirstOrDefault(x => x is T) as T;
-            if (f != null) return f;
-            f = ScriptableObject.CreateInstance<T>();
-            f.name = name;
-            rd.rendererFeatures.Add(f);
-#if UNITY_6000_0_OR_NEWER
-            rd.SetDirty();
 #endif
-            AssetDatabase.AddObjectToAsset(f, rd);
-            return f;
-        }
-
-        static ScriptableRendererFeature EnsureFeature(ScriptableRendererData rd, Type type, string name)
-        {
-            var f = rd.rendererFeatures.FirstOrDefault(x => x != null && x.GetType() == type);
-            if (f != null) return f;
-            f = ScriptableObject.CreateInstance(type) as ScriptableRendererFeature;
-            f.name = name;
-            rd.rendererFeatures.Add(f);
-#if UNITY_6000_0_OR_NEWER
-            rd.SetDirty();
-#endif
-            AssetDatabase.AddObjectToAsset(f, rd);
-            return f;
-        }
-
-        static void SetIfExists(SerializedObject so, string propName, object value)
-        {
-            var p = so.FindProperty(propName);
-            if (p == null) return;
-            if (value is int i) p.intValue = i;
-            else if (value is bool b) p.boolValue = b;
-            else if (value is UnityEngine.Object o) p.objectReferenceValue = o;
-            else if (value is string s) p.stringValue = s;
-        }
     }
 }
