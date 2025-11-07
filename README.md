@@ -1,3 +1,37 @@
+# 🎨 ACES 2.0 Tonemapper for Unity (URP)
+
+[![Unity](https://img.shields.io/badge/Unity-6.0%2B-blue.svg)](https://unity.com/)
+[![URP](https://img.shields.io/badge/URP-17%2B-green.svg)](https://docs.unity3d.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
+[![OpenColorIO](https://img.shields.io/badge/ACES-2.0-orange.svg)](https://github.com/AcademySoftwareFoundation/OpenColorIO-Config-ACES)
+
+A modern **ACES 2.0**-style tonemapper for Unity’s **Universal Render Pipeline (URP)**.  
+This package adds an updated, physically-accurate color transform based on the latest **ACES 2.0 OpenColorIO** configuration.
+
+---
+
+## ✨ Features
+
+- ✅ Physically-based **ACES 2.0 tonemapping**
+- ⚙️ **Automatic setup** via **Tools → ACES2 Setup**
+- 🎛️ Adjustable LUT contribution, size, and gamma options
+- 🧩 Works as a **URP Render Feature**
+- ⚡ Fully compatible with **Volume Profiles**
+- 🧱 Supports baked `.spi3d`, `.cube`, and Unity `Texture3D` LUTs
+- 💡 Tested with **Unity 6 / URP 17+**
+
+> ⚠️ Requires a **Universal Render Pipeline** project.  
+> Built-in and HDRP are not supported.
+
+---
+
+## 📦 Installation
+
+### Option 1 — Unity Package Manager (Recommended)
+
+1. Open **Unity → Window → Package Manager**
+2. Click the **+** icon → “Add package from Git URL...”
+3. Paste this URL: https://github.com/SNIELSEL/UnityURP-ACES2-Tonemapper.git
 4. Click **Add** — Unity will download and import the package automatically.
 
 ---
