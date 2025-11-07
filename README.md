@@ -10,6 +10,13 @@ This package adds an updated, physically-accurate color transform based on the l
 
 ---
 
+> 🧠 **Note:**  
+> Parts of this package — particularly the shader logic and render feature integration — were created with the assistance of **ChatGPT**,  
+> as I’m not deeply familiar with Unity’s shader and render feature APIs.  
+> All code was manually reviewed, tested, and verified to ensure correctness and stability.
+
+---
+
 ## ✨ Features
 
 - ✅ Physically-based **ACES 2.0 tonemapping**
