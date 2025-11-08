@@ -1,6 +1,6 @@
 {
   "name": "com.nielshaverkotte.aces2",
-  "version": "1.1.0",
+  "version": "1.0.0",
   "displayName": "ACES 2 Tonemapper (URP)",
   "description": "A full-screen ACES 2.0 tonemapper for URP. Adds a Volume-driven tonemapper and a RenderGraph-friendly renderer feature.",
   "license": "MIT",
