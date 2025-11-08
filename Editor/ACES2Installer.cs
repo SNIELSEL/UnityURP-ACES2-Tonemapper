@@ -6,6 +6,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
+using System.Reflection;
 
 namespace ACES2.EditorTools
 {
@@ -17,6 +18,7 @@ namespace ACES2.EditorTools
             lutPath = null;
             string[] roots =
             {
+                "Assets/Custom/ACES2/Samples~/ACES2/SceneTemplateAssets/ACES2Stuff",
                 "Assets/Custom/ACES2/Samples/ACES2/SceneTemplateAssets/ACES2Stuff",
                 "Assets/Samples/ACES2/SceneTemplateAssets/ACES2Stuff",
                 "Assets"
@@ -49,16 +51,68 @@ namespace ACES2.EditorTools
 
         public static void OpenPackageManagerToPackage(string packageName)
         {
-            EditorApplication.ExecuteMenuItem("Window/Package Manager");
-            var t = typeof(EditorApplication).Assembly.GetType("UnityEditor.PackageManager.UI.PackageManagerWindow");
-            if (t == null) return;
-            var win = EditorWindow.GetWindow(t, true, "Package Manager");
-            t.GetMethod("SelectPackageAndFilter",
-                System.Reflection.BindingFlags.Instance |
-                System.Reflection.BindingFlags.Public |
-                System.Reflection.BindingFlags.NonPublic)
-             ?.Invoke(win, new object[] { packageName, "InProject" });
+            // 1) Try both known menu paths (varies by Unity version/layout)
+            bool opened =
+                EditorApplication.ExecuteMenuItem("Window/Package Manager") ||
+                EditorApplication.ExecuteMenuItem("Window/Asset Management/Package Manager");
+
+            // 2) Find the Package Manager window type (namespace differs by version)
+            var editorAsm = typeof(EditorApplication).Assembly;
+            var pmType =
+                editorAsm.GetType("UnityEditor.PackageManager.UI.PackageManagerWindow") ??
+                editorAsm.GetType("UnityEditor.PackageManager.UI.Internal.PackageManagerWindow");
+
+            if (pmType == null)
+            {
+                if (!opened)
+                {
+                    EditorUtility.DisplayDialog(
+                        "Open Package Manager",
+                        "Could not open Package Manager automatically. Please open it via Window ▸ Package Manager.",
+                        "OK");
+                }
+                return;
+            }
+
+            // 3) Get (or create) the window
+            var window = EditorWindow.GetWindow(pmType, true, "Package Manager", true);
+            if (window == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "Open Package Manager",
+                    "Package Manager window could not be created.",
+                    "OK");
+                return;
+            }
+
+            // 4) Try API variants to focus a package
+            //    Newer editors use Internal.* and private methods; use reflection safely.
+            var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+            // Prefer SelectPackageAndFilter(packageName, "InProject")
+            var selectWithFilter = pmType.GetMethod("SelectPackageAndFilter", flags);
+            if (selectWithFilter != null)
+            {
+                try { selectWithFilter.Invoke(window, new object[] { packageName, "InProject" }); return; }
+                catch { /* fall through */ }
+            }
+
+            // Older versions: SelectPackage(packageName)
+            var selectPackage = pmType.GetMethod("SelectPackage", flags);
+            if (selectPackage != null)
+            {
+                try { selectPackage.Invoke(window, new object[] { packageName }); return; }
+                catch { /* fall through */ }
+            }
+
+            // If none succeeded, just leave the window open and notify.
+            EditorUtility.DisplayDialog(
+                "Open Package Manager",
+                "Opened Package Manager, but couldn’t focus the package automatically.\n" +
+                "Please search for it in the Package Manager.",
+                "OK");
         }
+
 
         public static void AddUrpRenderFeaturesFromMaterial(string materialPath)
         {
