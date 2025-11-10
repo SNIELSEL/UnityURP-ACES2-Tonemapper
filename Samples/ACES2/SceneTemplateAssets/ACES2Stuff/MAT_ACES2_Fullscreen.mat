@@ -91,7 +91,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _ACES2_OutputIsSRGB: 0
-    - _Aces2LutSize: 33
+    - _Aces2LutSize: 0
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
     - _AlphaToMask: 0
@@ -100,7 +100,7 @@ Material:
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _Contribution: 0.701
+    - _Contribution: 0
     - _Cull: 2
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
