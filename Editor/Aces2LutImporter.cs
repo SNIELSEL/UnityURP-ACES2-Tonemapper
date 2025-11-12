@@ -9,7 +9,7 @@ namespace Custom.ACES2.Editor
 {
     public class Aces2LutImporter : EditorWindow
     {
-        [MenuItem("Tools/ACES2/Import 3D LUT (.cube/.spi3d)")]
+        [MenuItem("Tools/ACES2/Import 3D LUT/ (.cube || .spi3d)")]
         public static void ImportLUT()
         {
             string path = EditorUtility.OpenFilePanel("Select 3D LUT", "", "cube,spi3d");

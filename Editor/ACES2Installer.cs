@@ -51,66 +51,85 @@ namespace ACES2.EditorTools
 
         public static void OpenPackageManagerToPackage(string packageName)
         {
-            // 1) Try both known menu paths (varies by Unity version/layout)
-            bool opened =
-                EditorApplication.ExecuteMenuItem("Window/Package Manager") ||
-                EditorApplication.ExecuteMenuItem("Window/Asset Management/Package Manager");
-
-            // 2) Find the Package Manager window type (namespace differs by version)
-            var editorAsm = typeof(EditorApplication).Assembly;
-            var pmType =
-                editorAsm.GetType("UnityEditor.PackageManager.UI.PackageManagerWindow") ??
-                editorAsm.GetType("UnityEditor.PackageManager.UI.Internal.PackageManagerWindow");
-
+            bool opened = UnityEditor.EditorApplication.ExecuteMenuItem("Window/Package Manager") || UnityEditor.EditorApplication.ExecuteMenuItem("Window/Asset Management/Package Manager");
+            var editorAsm = typeof(UnityEditor.EditorApplication).Assembly;
+            var pmType = editorAsm.GetType("UnityEditor.PackageManager.UI.Internal.PackageManagerWindow") ?? editorAsm.GetType("UnityEditor.PackageManager.UI.PackageManagerWindow");
             if (pmType == null)
             {
                 if (!opened)
-                {
-                    EditorUtility.DisplayDialog(
-                        "Open Package Manager",
-                        "Could not open Package Manager automatically. Please open it via Window ▸ Package Manager.",
-                        "OK");
-                }
+                    UnityEditor.EditorUtility.DisplayDialog("Open Package Manager", "Could not open Package Manager automatically. Please open it via Window ▸ Package Manager.", "OK");
                 return;
             }
 
-            // 3) Get (or create) the window
-            var window = EditorWindow.GetWindow(pmType, true, "Package Manager", true);
+            var window = UnityEditor.EditorWindow.GetWindow(pmType, true, "Package Manager", true);
             if (window == null)
             {
-                EditorUtility.DisplayDialog(
-                    "Open Package Manager",
-                    "Package Manager window could not be created.",
-                    "OK");
+                UnityEditor.EditorUtility.DisplayDialog("Open Package Manager", "Package Manager window could not be created.", "OK");
                 return;
             }
 
-            // 4) Try API variants to focus a package
-            //    Newer editors use Internal.* and private methods; use reflection safely.
-            var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+            var filterType = editorAsm.GetType("UnityEditor.PackageManager.UI.Internal.PackageFilterTab");
+            var selectWithFilter = (filterType != null) ? pmType.GetMethod("SelectPackageAndFilter", flags, null, new System.Type[] { typeof(string), filterType }, null) : null;
+            var selectPackage = pmType.GetMethod("SelectPackage", flags, null, new System.Type[] { typeof(string) }, null);
+            var getSelection = pmType.GetProperty("selectedPackage", flags) ?? pmType.GetProperty("m_SelectedPackage", flags);
 
-            // Prefer SelectPackageAndFilter(packageName, "InProject")
-            var selectWithFilter = pmType.GetMethod("SelectPackageAndFilter", flags);
-            if (selectWithFilter != null)
+            int tries = 0;
+            void Attempt()
             {
-                try { selectWithFilter.Invoke(window, new object[] { packageName, "InProject" }); return; }
-                catch { /* fall through */ }
+                tries++;
+                bool success = false;
+
+                try
+                {
+                    if (selectWithFilter != null)
+                    {
+                        var inProject = System.Enum.Parse(filterType, "InProject");
+                        try
+                        {
+                            selectWithFilter.Invoke(window, new object[] { packageName, inProject });
+                            success = true;
+                        }
+                        catch
+                        {
+                            var registry = System.Enum.Parse(filterType, "UnityRegistry");
+                            selectWithFilter.Invoke(window, new object[] { packageName, registry });
+                            success = true;
+                        }
+                    }
+                    else if (selectPackage != null)
+                    {
+                        selectPackage.Invoke(window, new object[] { packageName });
+                        success = true;
+                    }
+                }
+                catch { success = false; }
+
+                object selected = null;
+                if (getSelection != null)
+                {
+                    try { selected = getSelection.GetValue(window); } catch { }
+                }
+
+                bool matched = false;
+                if (selected != null)
+                {
+                    var idProp = selected.GetType().GetProperty("uniqueId", flags) ?? selected.GetType().GetProperty("name", flags);
+                    if (idProp != null)
+                    {
+                        var id = idProp.GetValue(selected)?.ToString();
+                        if (!string.IsNullOrEmpty(id) && id.Contains(packageName))
+                            matched = true;
+                    }
+                }
+
+                if (!matched && tries < 4)
+                    UnityEditor.EditorApplication.delayCall += Attempt;
+                else if (!matched)
+                    UnityEditor.EditorUtility.DisplayDialog("Open Package Manager", $"Opened Package Manager, but couldn’t find or focus “{packageName}”. Please search manually.", "OK");
             }
 
-            // Older versions: SelectPackage(packageName)
-            var selectPackage = pmType.GetMethod("SelectPackage", flags);
-            if (selectPackage != null)
-            {
-                try { selectPackage.Invoke(window, new object[] { packageName }); return; }
-                catch { /* fall through */ }
-            }
-
-            // If none succeeded, just leave the window open and notify.
-            EditorUtility.DisplayDialog(
-                "Open Package Manager",
-                "Opened Package Manager, but couldn’t focus the package automatically.\n" +
-                "Please search for it in the Package Manager.",
-                "OK");
+            UnityEditor.EditorApplication.delayCall += Attempt;
         }
 
 

@@ -45,18 +45,6 @@ namespace ACES2.EditorTools
             }
         }
 
-        [MenuItem("Tools/ACES2/Add URP Renderer Features", priority = 30)]
-        static void AddFeatures()
-        {
-            if (!ACES2Installer.TryFindSampleAssets(out var matPath, out _))
-            {
-                EditorUtility.DisplayDialog("ACES2 Tonemapper",
-                    "Material not found. Import the sample first or create the material.", "OK");
-                return;
-            }
-            ACES2Installer.AddUrpRenderFeaturesFromMaterial(matPath);
-        }
-
         [MenuItem("Tools/ACES2/Open Package Page", priority = 40)]
         static void OpenPM() => ACES2Installer.OpenPackageManagerToPackage("com.nielshaverkotte.aces2");
     }
