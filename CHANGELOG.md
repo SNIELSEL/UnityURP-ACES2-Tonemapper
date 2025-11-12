@@ -1,5 +1,13 @@
 \# Changelog
 
+\## \[1.0.1] - 2025-11-12
+
+\### Fixed
+
+\- Fixed lights in demo scene.
+
+\- Removed MenuItems that where not needed.
+
 
 
 \## \[1.0.0] - 2025-11-05
