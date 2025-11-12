@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f9e1cd86a143384f9a14ced8d5a07a7, type: 3}
   m_Name: CustomTonemapper
   m_EditorClassIdentifier: Custom.ACES2.Runtime::Custom.ACES2.CustomTonemapper
-  active: 0
+  active: 1
   mode:
     m_OverrideState: 1
     m_Value: 1
@@ -24,7 +24,7 @@ MonoBehaviour:
     m_Value: 33
   contribution:
     m_OverrideState: 1
-    m_Value: 0.738
+    m_Value: 0.509
   lutOutputIsSRGB:
     m_OverrideState: 1
     m_Value: 1

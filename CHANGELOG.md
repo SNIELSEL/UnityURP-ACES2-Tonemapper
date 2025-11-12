@@ -1,11 +1,12 @@
 \# Changelog
 
 
+
 \## \[1.0.0] - 2025-11-05
 
 \### Added
 
-\- Initial release with full \*\*ACES2 Tonemapper\*\* integration for URP.
+\- Initial Unity release with full \*\*ACES2 Tonemapper\*\* integration for URP.
 
 \- Support for Volume Profiles, baked LUTs, and Custom Renderer Features.
 
@@ -14,6 +15,4 @@
 \- Added automatic detection of missing ACES2 assets (LUT, material, or render features) with guided prompts.
 
 \- Compatible with Unity 6 / URP 17+.
-
-
 

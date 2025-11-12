@@ -170,8 +170,8 @@ Light:
   m_Enabled: 1
   serializedVersion: 11
   m_Type: 1
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 4
+  m_Color: {r: 0.95687324, g: 0.9375294, b: 0.9375294, a: 1}
+  m_Intensity: 2.18
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -180,7 +180,7 @@ Light:
     m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
-    m_Strength: 0.8
+    m_Strength: 1
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
@@ -1974,7 +1974,7 @@ ReflectionProbe:
   m_RenderDynamicObjects: 0
   m_UseOcclusionCulling: 1
   m_Importance: 1
-  m_CustomBakedTexture: {fileID: 0}
+  m_CustomBakedTexture: {fileID: 2800000, guid: 83f1356153c0f7b43a17476ca4e34468, type: 3}
 --- !u!4 &2116198339
 Transform:
   m_ObjectHideFlags: 0

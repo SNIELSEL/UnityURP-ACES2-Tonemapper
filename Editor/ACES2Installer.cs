@@ -6,7 +6,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
-using System.Reflection;
+using UnityEditor.PackageManager.Requests;
 
 namespace ACES2.EditorTools
 {
@@ -48,90 +48,6 @@ namespace ACES2.EditorTools
                 AssetDatabase.SaveAssets();
             }
         }
-
-        public static void OpenPackageManagerToPackage(string packageName)
-        {
-            bool opened = UnityEditor.EditorApplication.ExecuteMenuItem("Window/Package Manager") || UnityEditor.EditorApplication.ExecuteMenuItem("Window/Asset Management/Package Manager");
-            var editorAsm = typeof(UnityEditor.EditorApplication).Assembly;
-            var pmType = editorAsm.GetType("UnityEditor.PackageManager.UI.Internal.PackageManagerWindow") ?? editorAsm.GetType("UnityEditor.PackageManager.UI.PackageManagerWindow");
-            if (pmType == null)
-            {
-                if (!opened)
-                    UnityEditor.EditorUtility.DisplayDialog("Open Package Manager", "Could not open Package Manager automatically. Please open it via Window ▸ Package Manager.", "OK");
-                return;
-            }
-
-            var window = UnityEditor.EditorWindow.GetWindow(pmType, true, "Package Manager", true);
-            if (window == null)
-            {
-                UnityEditor.EditorUtility.DisplayDialog("Open Package Manager", "Package Manager window could not be created.", "OK");
-                return;
-            }
-
-            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
-            var filterType = editorAsm.GetType("UnityEditor.PackageManager.UI.Internal.PackageFilterTab");
-            var selectWithFilter = (filterType != null) ? pmType.GetMethod("SelectPackageAndFilter", flags, null, new System.Type[] { typeof(string), filterType }, null) : null;
-            var selectPackage = pmType.GetMethod("SelectPackage", flags, null, new System.Type[] { typeof(string) }, null);
-            var getSelection = pmType.GetProperty("selectedPackage", flags) ?? pmType.GetProperty("m_SelectedPackage", flags);
-
-            int tries = 0;
-            void Attempt()
-            {
-                tries++;
-                bool success = false;
-
-                try
-                {
-                    if (selectWithFilter != null)
-                    {
-                        var inProject = System.Enum.Parse(filterType, "InProject");
-                        try
-                        {
-                            selectWithFilter.Invoke(window, new object[] { packageName, inProject });
-                            success = true;
-                        }
-                        catch
-                        {
-                            var registry = System.Enum.Parse(filterType, "UnityRegistry");
-                            selectWithFilter.Invoke(window, new object[] { packageName, registry });
-                            success = true;
-                        }
-                    }
-                    else if (selectPackage != null)
-                    {
-                        selectPackage.Invoke(window, new object[] { packageName });
-                        success = true;
-                    }
-                }
-                catch { success = false; }
-
-                object selected = null;
-                if (getSelection != null)
-                {
-                    try { selected = getSelection.GetValue(window); } catch { }
-                }
-
-                bool matched = false;
-                if (selected != null)
-                {
-                    var idProp = selected.GetType().GetProperty("uniqueId", flags) ?? selected.GetType().GetProperty("name", flags);
-                    if (idProp != null)
-                    {
-                        var id = idProp.GetValue(selected)?.ToString();
-                        if (!string.IsNullOrEmpty(id) && id.Contains(packageName))
-                            matched = true;
-                    }
-                }
-
-                if (!matched && tries < 4)
-                    UnityEditor.EditorApplication.delayCall += Attempt;
-                else if (!matched)
-                    UnityEditor.EditorUtility.DisplayDialog("Open Package Manager", $"Opened Package Manager, but couldn’t find or focus “{packageName}”. Please search manually.", "OK");
-            }
-
-            UnityEditor.EditorApplication.delayCall += Attempt;
-        }
-
 
         public static void AddUrpRenderFeaturesFromMaterial(string materialPath)
         {

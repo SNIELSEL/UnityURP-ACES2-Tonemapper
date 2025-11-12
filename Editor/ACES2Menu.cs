@@ -12,9 +12,8 @@ namespace ACES2.EditorTools
             {
                 var choice = EditorUtility.DisplayDialogComplex(
                     "ACES2 Tonemapper",
-                    "Default ACES2 assets not found. Import the ACES2 sample from Package Manager?",
-                    "Open Package Manager", "Cancel", "Skip");
-                if (choice == 0) ACES2Installer.OpenPackageManagerToPackage("com.nielshaverkotte.aces2");
+                    "Default ACES2 assets not found. You can import the ACES2 sample manually from the Package Manager.",
+                    "OK", "Cancel", "Skip");
                 return;
             }
 
@@ -38,14 +37,10 @@ namespace ACES2.EditorTools
             }
             else
             {
-                var ok = EditorUtility.DisplayDialog("ACES2 Tonemapper",
-                    "Sample assets not found. Open Package Manager to import the ACES2 sample?",
-                    "Open Package Manager", "Close");
-                if (ok) ACES2Installer.OpenPackageManagerToPackage("com.nielshaverkotte.aces2");
+                EditorUtility.DisplayDialog("ACES2 Tonemapper",
+                    "Sample assets not found. You can import the ACES2 sample manually from the Package Manager.",
+                    "OK");
             }
         }
-
-        [MenuItem("Tools/ACES2/Open Package Page", priority = 40)]
-        static void OpenPM() => ACES2Installer.OpenPackageManagerToPackage("com.nielshaverkotte.aces2");
     }
 }
